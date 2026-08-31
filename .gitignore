@@ -1,0 +1,41 @@
+# --- Виртуальное окружение ---
+venv/
+
+# --- Секреты и локальные конфиги ---
+credentials.json   # ключи от Google и т.п.
+
+# --- Python-кэш ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+*.egg
+
+# --- IDE / редакторы ---
+.idea/
+.vscode/
+*.iml
+
+# --- Логи и временные файлы ---
+logs/
+*.log
+pounds.log
+
+# --- Локальные данные БД ---
+db/pgdata/
+
+# --- Тестовые артефакты ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Мусор от ОС ---
+.DS_Store
+Thumbs.db
+
+.idea/
+../paunds_api_lighter/.env
+/.env

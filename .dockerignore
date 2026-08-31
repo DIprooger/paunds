@@ -1,0 +1,9 @@
+pgdata
+logs
+venv
+__pycache__
+*.log
+*.pyc
+.db
+.git
+.idea

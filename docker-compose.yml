@@ -1,0 +1,144 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: gbpusd_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:55432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - common_backend
+
+    # Лимиты (compose / non-swarm)
+    cpus: "0.75"
+    mem_limit: 1g
+    memswap_limit: 1g        # swap запрещён
+    mem_swappiness: 0
+    pids_limit: 400
+
+    # Чтобы логи не раздували диск
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  adminer:
+    image: adminer
+    container_name: gbpusd_adminer
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8085:8080"
+    networks:
+      - common_backend
+    cpus: "0.25"
+    mem_limit: 256m
+    memswap_limit: 256m      # swap запрещён
+    mem_swappiness: 0
+    pids_limit: 150
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  diana_currency:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: diana_currency
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      FOREX_XLSX_PATH: /app/Статистика форекс.xlsx
+      LOG_FILE: /app/logs/pounds.log
+      GOOGLE_SERVICE_ACCOUNT_FILE: /app/credentials.json
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./Статистика форекс.xlsx:/app/Статистика форекс.xlsx:ro
+      - ./logs:/app/logs
+      - ./credentials.json:/app/credentials.json:ro
+    depends_on:
+      - db
+    networks:
+      - common_backend
+
+    cpus: "0.50"
+    mem_limit: 512m
+    memswap_limit: 512m      # swap запрещён
+    mem_swappiness: 0
+    pids_limit: 250
+
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  diana_currency_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: diana_currency_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LOG_FILE: /app/logs/pounds_api.log
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PARSER_API_KEY: ${PARSER_API_KEY}
+    command:
+      - sh
+      - -lc
+      - cd /app/paunds && PYTHONPATH=/app/paunds python -m uvicorn api_main:app --host 0.0.0.0 --port 8080
+    ports:
+      - "127.0.0.1:8086:8080"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - db
+    networks:
+      - common_backend
+
+    cpus: "0.25"
+    mem_limit: 256m
+    memswap_limit: 256m
+    mem_swappiness: 0
+    pids_limit: 150
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  common_backend:
+    external: true
